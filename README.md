@@ -9,6 +9,10 @@ A full-stack AI chat assistant for the workplace. Employees ask questions in a R
 
 It runs fully offline in demo mode (no API key needed). Set one environment variable to switch to Anthropic Claude.
 
+| Light | Dark | Mobile |
+| --- | --- | --- |
+| ![Chat in light mode](docs/screenshots/chat-light.png) | ![Chat in dark mode](docs/screenshots/chat-dark.png) | ![Chat on mobile](docs/screenshots/mobile.png) |
+
 ## Build progress
 
 This project is being built in milestones. Each one is a working, tested increment.
@@ -16,7 +20,7 @@ This project is being built in milestones. Each one is a working, tested increme
 | # | Milestone | Status |
 | --- | --- | --- |
 | 1 | Backend chat API with Server-Sent Events streaming, demo and Claude providers | ✅ Done |
-| 2 | React chat UI: streaming messages, markdown, stop button, light/dark theme | ⏳ Planned |
+| 2 | React chat UI: streaming messages, markdown, stop button, light/dark theme | ✅ Done |
 | 3 | Conversation memory: saved conversations, sidebar history, rename and delete | ⏳ Planned |
 | 4 | Knowledge answers: RAG over company documents with clickable citations | ⏳ Planned |
 | 5 | Actions: MCP tools for tickets and approvals, shown as cards in the chat | ⏳ Planned |
@@ -38,7 +42,7 @@ flowchart LR
 
 | Layer | Responsibility |
 | --- | --- |
-| **React UI** (`frontend/`) | Chat window, streams tokens as they arrive, shows sources and action results |
+| **React UI** (`frontend/`) | Chat window built with React + Vite. `lib/sse.js` reads the streamed response and parses events even when a network chunk ends mid-event; `lib/useChat.js` manages the conversation (sending, streaming, Stop via `AbortController`, Retry after errors) |
 | **FastAPI** (`backend/app/main.py`) | `/api/chat` (full reply) and `/api/chat/stream` (SSE); validation, history window, error events |
 | **Providers** (`backend/app/providers.py`) | One `stream(messages, system)` interface for the offline demo and Claude; easy to add more |
 | **Memory**, **RAG**, **tools** | Added in milestones 3 to 5, reusing ideas from [rag-knowledge-assistant](https://github.com/koorasupriya/rag-knowledge-assistant) and [mcp-agent-orchestrator](https://github.com/koorasupriya/mcp-agent-orchestrator) |
@@ -89,7 +93,25 @@ export ANTHROPIC_API_KEY=your-key
 
 ### Frontend
 
-Coming in milestone 2 (`frontend/`, React + Vite).
+With the backend running on port 8000, open a second terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open http://localhost:5173. The Vite dev server forwards `/api` calls to the backend.
+
+UI features:
+
+- Replies stream in word by word, with a typing indicator and cursor
+- Markdown in answers: lists, tables and code blocks
+- **Stop** cancels a reply mid-stream; **Retry** resends after an error
+- Enter sends, Shift+Enter adds a new line, and the text box grows as you type
+- Light and dark theme (follows your system setting, remembered after you switch)
+- Works on mobile screens
+- A badge shows which model provider the backend is using: demo, claude or offline
 
 ## Configuration
 
@@ -105,10 +127,14 @@ Coming in milestone 2 (`frontend/`, React + Vite).
 ## Tests
 
 ```bash
-cd backend && pytest
+cd backend && pytest        # 10 tests
+cd frontend && npm test     # 10 tests
 ```
 
-Backend tests cover the health check, full replies, the SSE event sequence, error events when the model fails mid-stream, request validation, the history window and provider selection.
+- **Backend:** health check, full replies, the SSE event sequence, error events when the model fails mid-stream, request validation, the history window and provider selection.
+- **Frontend:** SSE parsing across split network chunks, the streaming client, sending with Enter, multi-turn history, Stop, error and Retry, and New chat.
+
+CI runs both suites on every push. The frontend job also checks that the production build succeeds.
 
 ## License
 
